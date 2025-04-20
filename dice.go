@@ -126,7 +126,7 @@ func (t token) isArithmetic() bool {
 		return false
 	}
 
-	if t == "+" || t == "-" {
+	if t == "+" || t == "-" || t == "*" {
 		return true
 	}
 
