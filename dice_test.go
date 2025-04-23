@@ -135,6 +135,26 @@ func Test_token_toDice(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "advantage",
+			tr:   "2d20kh1",
+			want: diceNode{
+				repetitions: 2,
+				faces:       20,
+				keep:        -1,
+			},
+			wantErr: false,
+		},
+		{
+			name: "disadvantage",
+			tr:   "2d20kl1",
+			want: diceNode{
+				repetitions: 2,
+				faces:       20,
+				keep:        1,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -195,20 +215,40 @@ func Test_diceNode_Result(t *testing.T) {
 			fields: fields{
 				repetitions: 2,
 				faces:       1,
-				keep:        1,
+				keep:        -1,
 			},
 			minValue: 1,
 			maxValue: 1,
+		},
+		{
+			name: "keep highest 2 3d1kh2",
+			fields: fields{
+				repetitions: 3,
+				faces:       1,
+				keep:        -2,
+			},
+			minValue: 2,
+			maxValue: 2,
 		},
 		{
 			name: "disadvantage 2d1kl1",
 			fields: fields{
 				repetitions: 2,
 				faces:       1,
-				keep:        -1,
+				keep:        1,
 			},
 			minValue: 1,
 			maxValue: 1,
+		},
+		{
+			name: "keep lowest 2 3d1kl2",
+			fields: fields{
+				repetitions: 3,
+				faces:       1,
+				keep:        2,
+			},
+			minValue: 2,
+			maxValue: 2,
 		},
 	}
 	for _, tt := range tests {

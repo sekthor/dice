@@ -101,9 +101,9 @@ func (n diceNode) Result() Result {
 	end := len(rolls)
 	if n.keep != 0 {
 		if n.keep < 0 {
-			end += n.keep
+			end = n.keep * -1
 		} else {
-			start += n.keep
+			start += len(rolls) - n.keep
 		}
 	}
 
@@ -271,7 +271,7 @@ func (t token) toDice() (diceNode, error) {
 			return dice, fmt.Errorf("the kh/hl parameter must be numeric")
 		}
 
-		if t[diceLength+1] == 'l' {
+		if t[diceLength+1] == 'h' {
 			num *= -1
 		}
 
