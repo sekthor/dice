@@ -8,8 +8,15 @@ import (
 	"unicode"
 )
 
+var (
+	diceType       = reflect.TypeOf(diceNode{})
+	arithmeticType = reflect.TypeOf(arithmeticNode{})
+	numericType    = reflect.TypeOf(numericNode{})
+)
+
 type diceNode struct {
-	faces int
+	repetitions int
+	faces       int
 }
 
 type token string
@@ -113,7 +120,27 @@ func tokenize(expression string) []token {
 	return tokens
 }
 
-func (t token) isDice() bool {
+func (t token) toNumeric() (numericNode, error) {
+	num, err := strconv.Atoi(string(t))
+	if err != nil {
+		return numericNode{}, err
+	}
+	return numericNode{num: num}, nil
+}
+
+func (t token) toArithmetic() (arithmeticNode, error) {
+	if t != "+" && t != "-" {
+		return arithmeticNode{}, fmt.Errorf("'%s' is not valid arithmetic operation", t)
+	}
+
+	return arithmeticNode{
+		operation: t,
+	}, nil
+}
+
+func (t token) toDice() (diceNode, error) {
+	var dice diceNode
+	var err error
 	var repetitionsLength int
 	var dPosition int = -1
 	var char rune
@@ -126,12 +153,19 @@ func (t token) isDice() bool {
 		if unicode.IsDigit(char) {
 			continue
 		}
-		return false
+		return dice, fmt.Errorf("dice token must start with 'd' rune or digit")
 	}
 
 	// if dPosition is still unset there was no 'd' rune in the string
 	if dPosition == -1 {
-		return false
+		return dice, fmt.Errorf("dice token must contain 'd' rune")
+	}
+
+	if repetitionsLength > 0 {
+		dice.repetitions, err = strconv.Atoi(string(t[:repetitionsLength]))
+		if err != nil {
+			return dice, fmt.Errorf("could not convert repetitions '%s' to int", t[:repetitionsLength])
+		}
 	}
 
 	var facesLength int
@@ -139,92 +173,88 @@ func (t token) isDice() bool {
 		if !unicode.IsDigit(char) {
 			// at least one numeric digit is expected
 			if facesLength == 0 {
-				return false
+				return dice, fmt.Errorf("dice token must specify face count")
 			}
 			break
 		}
 	}
 	facesLength++
 
+	dice.faces, err = strconv.Atoi(string(t[dPosition+1 : dPosition+1+facesLength]))
+	if err != nil {
+		return dice, fmt.Errorf("could not convert repetitions '%s' to int", t[dPosition+1:dPosition+1+facesLength])
+	}
+
 	if len(t) == repetitionsLength+1+facesLength {
-		return true
+		return dice, nil
 	}
 
 	// TODO: test the possibilities after faces digits
 
-	return true
+	return dice, nil
 }
 
-func (t token) isArithmetic() bool {
-	if len(t) != 1 {
-		return false
+func (t token) toNode() (node, error) {
+	if node, err := t.toNumeric(); err == nil {
+		return node, err
 	}
 
-	if t == "+" || t == "-" || t == "*" {
-		return true
+	if node, err := t.toArithmetic(); err == nil {
+		return node, err
 	}
 
-	return false
-}
-
-func (t token) isNumeric() bool {
-	_, err := strconv.Atoi(string(t))
-	return err == nil
-}
-
-func (t token) numeric() numericNode {
-	num, _ := strconv.Atoi(string(t))
-	return numericNode{num: num}
-}
-
-func (t token) arithmetic() arithmeticNode {
-	return arithmeticNode{
-		operation: t,
+	if node, err := t.toDice(); err == nil {
+		return node, err
 	}
-}
 
-func (t token) dice() diceNode {
-	faces, _ := strconv.Atoi(string(t[1:]))
-	return diceNode{faces: faces}
+	return nil, fmt.Errorf("unknown token '%s'", t)
 }
 
 func createAST(tokens []token) (node, error) {
 	var astRoot node
 	for _, token := range tokens {
 
-		var node node
-
-		if token.isNumeric() {
-			node = token.numeric()
-		} else if token.isArithmetic() {
-			node := token.arithmetic()
-			node.left = astRoot
-			astRoot = node
-			continue
-		} else if token.isDice() {
-			node = token.dice()
-		} else {
-			return nil, fmt.Errorf("invalid token: %s", token)
+		node, err := token.toNode()
+		if err != nil {
+			return nil, err
 		}
 
-		if astRoot == nil {
-			astRoot = node
-			continue
-		}
+		switch node.Type() {
 
-		if astRoot.Type() == reflect.TypeOf(arithmeticNode{}) {
-			tmp, _ := astRoot.(arithmeticNode)
-			tmp.right = node
+		case numericType:
+			if astRoot == nil {
+				astRoot = node
+				continue
+			}
+			if astRoot.Type() == arithmeticType {
+				tmp := astRoot.(arithmeticNode)
+				tmp.right = node
+				astRoot = tmp
+				continue
+			}
+		case arithmeticType:
+			if astRoot == nil {
+				return nil, fmt.Errorf("expression can not start with arithmetic token")
+			}
+			tmp := node.(arithmeticNode)
+			tmp.left = astRoot
 			astRoot = tmp
 			continue
-		}
+		case diceType:
+			if astRoot == nil {
+				astRoot = node
+				continue
+			}
+			if astRoot.Type() != arithmeticType {
+				return nil, fmt.Errorf("non starting dice token '%s' must be directly preceded by arithmetic token", token)
+			}
 
-		if astRoot.Type() == reflect.TypeOf(numericNode{}) {
-			parent := arithmeticNode{operation: "*"}
-			parent.left = astRoot
-			parent.right = node
-			astRoot = parent
-			continue
+			tmp := astRoot.(arithmeticNode)
+			tmp.right = node
+			astRoot = tmp
+
+		default:
+			return nil, nil
 		}
 	}
 	return astRoot, nil

@@ -49,57 +49,6 @@ func Test_tokenize(t *testing.T) {
 	}
 }
 
-func Test_token_isDice(t *testing.T) {
-	tests := []struct {
-		name string
-		tr   token
-		want bool
-	}{
-		{
-			name: "empty string",
-			tr:   "",
-			want: false,
-		},
-		{
-			name: "invalid start character",
-			tr:   " ",
-			want: false,
-		},
-		{
-			name: "single dice",
-			tr:   "d20",
-			want: true,
-		},
-		{
-			name: "dice with repetition",
-			tr:   "1d20",
-			want: true,
-		},
-		{
-			name: "advantage",
-			tr:   "1d20kh1",
-			want: true,
-		},
-		{
-			name: "arithmetic token",
-			tr:   "+",
-			want: false,
-		},
-		{
-			name: "numeric token",
-			tr:   "1",
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.tr.isDice(); got != tt.want {
-				t.Errorf("token.isDice() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_createAST(t *testing.T) {
 	type args struct {
 		tokens []token
@@ -117,22 +66,20 @@ func Test_createAST(t *testing.T) {
 		},
 		{
 			name: "1d20",
-			args: args{[]token{"1", "d20"}},
-			want: arithmeticNode{
-				operation: "*",
-				left:      numericNode{1},
-				right:     diceNode{faces: 20},
+			args: args{[]token{"1d20"}},
+			want: diceNode{
+				repetitions: 1,
+				faces:       20,
 			},
 		},
 		{
 			name: "1d20+5",
-			args: args{[]token{"1", "d20", "+", "5"}},
+			args: args{[]token{"1d20", "+", "5"}},
 			want: arithmeticNode{
 				operation: "+",
-				left: arithmeticNode{
-					operation: "*",
-					left:      numericNode{1},
-					right:     diceNode{faces: 20},
+				left: diceNode{
+					repetitions: 1,
+					faces:       20,
 				},
 				right: numericNode{num: 5},
 			},
@@ -147,6 +94,55 @@ func Test_createAST(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("createAST() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_token_toDice(t *testing.T) {
+	tests := []struct {
+		name    string
+		tr      token
+		want    diceNode
+		wantErr bool
+	}{
+		{
+			name: "single dice",
+			tr:   "d20",
+			want: diceNode{
+				repetitions: 0,
+				faces:       20,
+			},
+			wantErr: false,
+		},
+		{
+			name: "single dice, one rep",
+			tr:   "1d20",
+			want: diceNode{
+				repetitions: 1,
+				faces:       20,
+			},
+			wantErr: false,
+		},
+		{
+			name: "ten dice, one rep",
+			tr:   "10d20",
+			want: diceNode{
+				repetitions: 10,
+				faces:       20,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.tr.toDice()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("token.toDice() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("token.toDice() = %v, want %v", got, tt.want)
 			}
 		})
 	}
