@@ -15,24 +15,29 @@ func Test_tokenize(t *testing.T) {
 		wantTokens []token
 	}{
 		{
-			name:       "single dice",
-			args:       args{expression: "1d20"},
-			wantTokens: []token{"1", "d20"},
+			name:       "single dice no repetition",
+			args:       args{expression: "d20"},
+			wantTokens: []token{"d20"},
 		},
 		{
-			name:       "repeat dice",
+			name:       "single dice with repetition",
+			args:       args{expression: "1d20"},
+			wantTokens: []token{"1d20"},
+		},
+		{
+			name:       "repeat dice twice",
 			args:       args{expression: "2d20"},
-			wantTokens: []token{"2", "d20"},
+			wantTokens: []token{"2d20"},
 		},
 		{
 			name:       "with coefficient",
 			args:       args{expression: "2d20+5"},
-			wantTokens: []token{"2", "d20", "+", "5"},
+			wantTokens: []token{"2d20", "+", "5"},
 		},
 		{
 			name:       "two dice",
 			args:       args{expression: "1d20+1d10"},
-			wantTokens: []token{"1", "d20", "+", "1", "d10"},
+			wantTokens: []token{"1d20", "+", "1d10"},
 		},
 	}
 	for _, tt := range tests {

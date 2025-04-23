@@ -83,7 +83,12 @@ func tokenize(expression string) []token {
 		}
 
 		if char == 'd' {
-			previousTokenEnd = true
+			for _, char := range currentToken {
+				if char < '0' || char > '9' {
+					previousTokenEnd = true
+					break
+				}
+			}
 		}
 
 		if previousTokenEnd {
