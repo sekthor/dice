@@ -114,15 +114,44 @@ func tokenize(expression string) []token {
 }
 
 func (t token) isDice() bool {
-	if len(t) < 2 {
+	var repetitionsLength int
+	var dPosition int = -1
+	var char rune
+
+	for repetitionsLength, char = range t {
+		if char == 'd' {
+			dPosition = repetitionsLength
+			break
+		}
+		if unicode.IsDigit(char) {
+			continue
+		}
 		return false
 	}
-	if t[0] != 'd' {
+
+	// if dPosition is still unset there was no 'd' rune in the string
+	if dPosition == -1 {
 		return false
 	}
-	if _, err := strconv.Atoi(string(t[1:])); err != nil {
-		return false
+
+	var facesLength int
+	for facesLength, char = range t[repetitionsLength+1:] {
+		if !unicode.IsDigit(char) {
+			// at least one numeric digit is expected
+			if facesLength == 0 {
+				return false
+			}
+			break
+		}
 	}
+	facesLength++
+
+	if len(t) == repetitionsLength+1+facesLength {
+		return true
+	}
+
+	// TODO: test the possibilities after faces digits
+
 	return true
 }
 

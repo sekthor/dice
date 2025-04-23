@@ -56,14 +56,29 @@ func Test_token_isDice(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "d20",
+			name: "empty string",
+			tr:   "",
+			want: false,
+		},
+		{
+			name: "invalid start character",
+			tr:   " ",
+			want: false,
+		},
+		{
+			name: "single dice",
 			tr:   "d20",
 			want: true,
 		},
 		{
-			name: "1d20",
+			name: "dice with repetition",
 			tr:   "1d20",
-			want: false,
+			want: true,
+		},
+		{
+			name: "advantage",
+			tr:   "1d20kh1",
+			want: true,
 		},
 		{
 			name: "arithmetic token",
