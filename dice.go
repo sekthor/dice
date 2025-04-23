@@ -271,7 +271,7 @@ func (t token) toDice() (diceNode, error) {
 			return dice, fmt.Errorf("the kh/hl parameter must be numeric")
 		}
 
-		if t[diceLength] == 'l' {
+		if t[diceLength+1] == 'l' {
 			num *= -1
 		}
 

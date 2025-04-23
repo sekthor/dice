@@ -200,6 +200,16 @@ func Test_diceNode_Result(t *testing.T) {
 			minValue: 1,
 			maxValue: 1,
 		},
+		{
+			name: "disadvantage 2d1kl1",
+			fields: fields{
+				repetitions: 2,
+				faces:       1,
+				keep:        -1,
+			},
+			minValue: 1,
+			maxValue: 1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
