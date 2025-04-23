@@ -199,3 +199,50 @@ func Test_diceNode_Result(t *testing.T) {
 		})
 	}
 }
+
+func Test_numericNode_Result(t *testing.T) {
+	type fields struct {
+		num int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   Result
+	}{
+		{
+			name:   "one",
+			fields: fields{num: 1},
+			want: Result{
+				Value:   1,
+				Details: "1",
+			},
+		},
+		{
+			name:   "twenty",
+			fields: fields{num: 20},
+			want: Result{
+				Value:   20,
+				Details: "20",
+			},
+		},
+		{
+			// should not be tokenizable like that, but technically valid
+			name:   "minus one",
+			fields: fields{num: -1},
+			want: Result{
+				Value:   -1,
+				Details: "-1",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := numericNode{
+				num: tt.fields.num,
+			}
+			if got := n.Result(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("numericNode.Result() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
