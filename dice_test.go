@@ -154,6 +154,7 @@ func Test_diceNode_Result(t *testing.T) {
 	type fields struct {
 		repetitions int
 		faces       int
+		keep        int
 	}
 	tests := []struct {
 		name     string
@@ -179,19 +180,40 @@ func Test_diceNode_Result(t *testing.T) {
 			minValue: 2,
 			maxValue: 40,
 		},
+		{
+			name: "two d1 2d1",
+			fields: fields{
+				repetitions: 2,
+				faces:       1,
+				keep:        0,
+			},
+			minValue: 1,
+			maxValue: 2,
+		},
+		{
+			name: "advantage 2d1kh1",
+			fields: fields{
+				repetitions: 2,
+				faces:       1,
+				keep:        1,
+			},
+			minValue: 1,
+			maxValue: 1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			n := diceNode{
 				repetitions: tt.fields.repetitions,
 				faces:       tt.fields.faces,
+				keep:        tt.fields.keep,
 			}
 			got := n.Result()
-			if got.Value < tt.minValue || got.Value >= tt.maxValue {
+			if (got.Value < tt.minValue) || (got.Value > tt.maxValue) {
 				t.Errorf("diceNode.Result() = %v, want %v", got.Value, fmt.Sprintf("range %d-%d", tt.minValue, tt.maxValue))
 			}
 
-			pattern := fmt.Sprintf("%dd%d\\(\\d+(,\\d+)*\\)$", n.repetitions, n.faces)
+			pattern := fmt.Sprintf("%dd%d(?:kh\\d+|kl\\d+)?\\(\\d+(,\\d+)*\\)=>\\(\\d+(,\\d+)*\\)$", n.repetitions, n.faces)
 			ok, err := regexp.MatchString(pattern, got.Details)
 			if err != nil || !ok {
 				t.Errorf("diceNode.Result() = %v, want pattern %v", got.Details, pattern)
@@ -306,7 +328,7 @@ func Test_arithmeticNode_Result(t *testing.T) {
 			},
 			want: Result{
 				Value:   3,
-				Details: "(1d1(1))+(2)",
+				Details: "(1d1(1)=>(1))+(2)",
 			},
 		},
 	}

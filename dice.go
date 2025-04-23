@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"sort"
 	"strconv"
 	"unicode"
 )
@@ -38,6 +39,7 @@ type arithmeticNode struct {
 type diceNode struct {
 	repetitions int
 	faces       int
+	keep        int
 }
 
 type Result struct {
@@ -69,7 +71,8 @@ func (n arithmeticNode) Result() Result {
 
 func (n diceNode) Result() Result {
 	details := ""
-	value := 0
+
+	var rolls []int
 
 	for range n.repetitions {
 		roll := rand.Intn(n.faces) + 1
@@ -78,9 +81,44 @@ func (n diceNode) Result() Result {
 			details += ","
 		}
 		details += fmt.Sprintf("%d", roll)
+		rolls = append(rolls, roll)
+	}
+
+	keep := ""
+	if n.keep < 0 {
+		keep = fmt.Sprintf("kl%d", (-1 * n.keep))
+	} else if n.keep > 0 {
+		keep = fmt.Sprintf("kh%d", n.keep)
+	}
+
+	details = fmt.Sprintf("%dd%d%s(%s)", n.repetitions, n.faces, keep, details)
+
+	// kh1 => rolls[len(rolls)-1-1 : len(rolls)]
+	// hl1 => rolls[0 : len(rolls)-1]
+	sort.Ints(rolls)
+	value := 0
+	start := 0
+	end := len(rolls)
+	if n.keep != 0 {
+		if n.keep < 0 {
+			end += n.keep
+		} else {
+			start += n.keep
+		}
+	}
+
+	selected := ""
+
+	for _, roll := range rolls[start:end] {
+		if selected != "" {
+			selected += ","
+		}
+		selected += fmt.Sprintf("%d", roll)
 		value += roll
 	}
-	details = fmt.Sprintf("%dd%d(%s)", n.repetitions, n.faces, details)
+
+	details = fmt.Sprintf("%s=>(%s)", details, selected)
+
 	return Result{
 		Value:   value,
 		Details: details,
@@ -202,21 +240,43 @@ func (t token) toDice() (diceNode, error) {
 			if facesLength == 0 {
 				return dice, fmt.Errorf("dice token must specify face count")
 			}
+			facesLength--
 			break
 		}
 	}
 	facesLength++
 
-	dice.faces, err = strconv.Atoi(string(t[dPosition+1 : dPosition+1+facesLength]))
+	facesStart := dPosition + 1
+	facesEnd := dPosition + 1 + facesLength
+	dice.faces, err = strconv.Atoi(string(t[facesStart:facesEnd]))
 	if err != nil {
 		return dice, fmt.Errorf("could not convert repetitions '%s' to int", t[dPosition+1:dPosition+1+facesLength])
 	}
 
-	if len(t) == repetitionsLength+1+facesLength {
+	diceLength := repetitionsLength + 1 + facesLength
+	if len(t) == diceLength {
 		return dice, nil
 	}
 
 	// TODO: test the possibilities after faces digits
+	if t[diceLength] == 'k' {
+
+		// must be at least k(h | l)[0-9]
+		if len(t[diceLength:]) < 3 {
+			return dice, fmt.Errorf("could not evaluate kh/kl in token '%s'", t)
+		}
+
+		num, err := strconv.Atoi(string(t[diceLength+2:]))
+		if err != nil {
+			return dice, fmt.Errorf("the kh/hl parameter must be numeric")
+		}
+
+		if t[diceLength] == 'l' {
+			num *= -1
+		}
+
+		dice.keep = num
+	}
 
 	return dice, nil
 }
@@ -285,4 +345,12 @@ func createAST(tokens []token) (ResultProvider, error) {
 		}
 	}
 	return astRoot, nil
+}
+
+func Evaluate(expression string) (Result, error) {
+	ast, err := createAST(tokenize(expression))
+	if err != nil {
+		return Result{}, err
+	}
+	return ast.Result(), nil
 }
