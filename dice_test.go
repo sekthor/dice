@@ -246,3 +246,80 @@ func Test_numericNode_Result(t *testing.T) {
 		})
 	}
 }
+
+func Test_arithmeticNode_Result(t *testing.T) {
+	type fields struct {
+		right     ResultProvider
+		left      ResultProvider
+		operation token
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   Result
+	}{
+		{
+			name: "one plus one",
+			fields: fields{
+				operation: "+",
+				right:     numericNode{1},
+				left:      numericNode{1},
+			},
+			want: Result{
+				Value:   2,
+				Details: "(1)+(1)",
+			},
+		},
+		{
+			name: "one plus two",
+			fields: fields{
+				operation: "+",
+				right:     numericNode{1},
+				left:      numericNode{2},
+			},
+			want: Result{
+				Value:   3,
+				Details: "(1)+(2)",
+			},
+		},
+		{
+			name: "two minus one",
+			fields: fields{
+				operation: "-",
+				right:     numericNode{2},
+				left:      numericNode{1},
+			},
+			want: Result{
+				Value:   1,
+				Details: "(2)-(1)",
+			},
+		},
+		{
+			name: "1d1 plus two",
+			fields: fields{
+				operation: "+",
+				right: diceNode{
+					faces:       1,
+					repetitions: 1,
+				},
+				left: numericNode{2},
+			},
+			want: Result{
+				Value:   3,
+				Details: "(1d1(1))+(2)",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := arithmeticNode{
+				right:     tt.fields.right,
+				left:      tt.fields.left,
+				operation: tt.fields.operation,
+			}
+			if got := n.Result(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("arithmeticNode.Result() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
