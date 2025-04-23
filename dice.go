@@ -19,10 +19,15 @@ type diceNode struct {
 	faces       int
 }
 
+type result struct {
+	value   int
+	details string
+}
+
 type token string
 
 type node interface {
-	Value() int
+	Result() result
 	Type() reflect.Type
 }
 
@@ -36,20 +41,30 @@ type arithmeticNode struct {
 	operation token
 }
 
-func (n numericNode) Value() int {
-	return n.num
+func (n numericNode) Result() result {
+	return result{value: n.num, details: fmt.Sprintf("%d", n.num)}
 }
 
 func (n numericNode) Type() reflect.Type {
 	return reflect.TypeOf(n)
 }
 
-func (n arithmeticNode) Value() int {
+func (n arithmeticNode) Result() result {
+
+	right := n.right.Result()
+	left := n.left.Result()
+
 	switch n.operation {
 	case "-":
-		return n.right.Value() + n.left.Value()
+		return result{
+			value:   right.value - left.value,
+			details: fmt.Sprintf("(%s)-(%s)", right.details, left.details),
+		}
 	default:
-		return n.right.Value() + n.left.Value()
+		return result{
+			value:   right.value + left.value,
+			details: fmt.Sprintf("(%s)+(%s)", right.details, left.details),
+		}
 	}
 }
 
@@ -57,8 +72,25 @@ func (n arithmeticNode) Type() reflect.Type {
 	return reflect.TypeOf(n)
 }
 
-func (n diceNode) Value() int {
-	return rand.Intn(n.faces) + 1
+func (n diceNode) Result() result {
+
+	details := ""
+	value := 0
+
+	for range n.repetitions {
+		roll := rand.Intn(n.faces) + 1
+
+		if details != "" {
+			details += ","
+		}
+		details += fmt.Sprintf("%d", roll)
+		value += roll
+	}
+	details = fmt.Sprintf("%dd%d(%s)", n.repetitions, n.faces, details)
+	return result{
+		value:   value,
+		details: details,
+	}
 }
 
 func (n diceNode) Type() reflect.Type {

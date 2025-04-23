@@ -1,7 +1,9 @@
 package dice
 
 import (
+	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 )
 
@@ -143,6 +145,56 @@ func Test_token_toDice(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("token.toDice() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_diceNode_Result(t *testing.T) {
+	type fields struct {
+		repetitions int
+		faces       int
+	}
+	tests := []struct {
+		name     string
+		fields   fields
+		minValue int
+		maxValue int
+	}{
+		{
+			name: "single d20",
+			fields: fields{
+				repetitions: 1,
+				faces:       20,
+			},
+			minValue: 1,
+			maxValue: 20,
+		},
+		{
+			name: "two d20",
+			fields: fields{
+				repetitions: 2,
+				faces:       20,
+			},
+			minValue: 2,
+			maxValue: 40,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n := diceNode{
+				repetitions: tt.fields.repetitions,
+				faces:       tt.fields.faces,
+			}
+			got := n.Result()
+			if got.value < tt.minValue || got.value >= tt.maxValue {
+				t.Errorf("diceNode.Result() = %v, want %v", got.value, fmt.Sprintf("range %d-%d", tt.minValue, tt.maxValue))
+			}
+
+			pattern := fmt.Sprintf("%dd%d\\(\\d+(,\\d+)*\\)$", n.repetitions, n.faces)
+			ok, err := regexp.MatchString(pattern, got.details)
+			if err != nil || !ok {
+				t.Errorf("diceNode.Result() = %v, want pattern %v", got.details, pattern)
 			}
 		})
 	}
