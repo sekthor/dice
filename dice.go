@@ -8,27 +8,21 @@ import (
 	"unicode"
 )
 
+// name types "kind", because lowercase type is reserved word
 var (
-	diceType       = reflect.TypeOf(diceNode{})
-	arithmeticType = reflect.TypeOf(arithmeticNode{})
-	numericType    = reflect.TypeOf(numericNode{})
+	diceKind       = reflect.TypeOf(diceNode{})
+	arithmeticKind = reflect.TypeOf(arithmeticNode{})
+	numericKind    = reflect.TypeOf(numericNode{})
 )
-
-type diceNode struct {
-	repetitions int
-	faces       int
-}
-
-type result struct {
-	value   int
-	details string
-}
 
 type token string
 
-type node interface {
-	Result() result
-	Type() reflect.Type
+// abstract syntax tree (AST) node
+// the root node of the tree will call child nodes' Result() function and
+// compute own Result() from it
+type ResultProvider interface {
+	Result() Result
+	kind() reflect.Type
 }
 
 type numericNode struct {
@@ -36,44 +30,44 @@ type numericNode struct {
 }
 
 type arithmeticNode struct {
-	right     node
-	left      node
+	right     ResultProvider
+	left      ResultProvider
 	operation token
 }
 
-func (n numericNode) Result() result {
-	return result{value: n.num, details: fmt.Sprintf("%d", n.num)}
+type diceNode struct {
+	repetitions int
+	faces       int
 }
 
-func (n numericNode) Type() reflect.Type {
-	return reflect.TypeOf(n)
+type Result struct {
+	Value   int
+	Details string
 }
 
-func (n arithmeticNode) Result() result {
+func (n numericNode) Result() Result {
+	return Result{Value: n.num, Details: fmt.Sprintf("%d", n.num)}
+}
 
+func (n arithmeticNode) Result() Result {
 	right := n.right.Result()
 	left := n.left.Result()
 
 	switch n.operation {
 	case "-":
-		return result{
-			value:   right.value - left.value,
-			details: fmt.Sprintf("(%s)-(%s)", right.details, left.details),
+		return Result{
+			Value:   right.Value - left.Value,
+			Details: fmt.Sprintf("(%s)-(%s)", right.Details, left.Details),
 		}
 	default:
-		return result{
-			value:   right.value + left.value,
-			details: fmt.Sprintf("(%s)+(%s)", right.details, left.details),
+		return Result{
+			Value:   right.Value + left.Value,
+			Details: fmt.Sprintf("(%s)+(%s)", right.Details, left.Details),
 		}
 	}
 }
 
-func (n arithmeticNode) Type() reflect.Type {
-	return reflect.TypeOf(n)
-}
-
-func (n diceNode) Result() result {
-
+func (n diceNode) Result() Result {
 	details := ""
 	value := 0
 
@@ -87,22 +81,23 @@ func (n diceNode) Result() result {
 		value += roll
 	}
 	details = fmt.Sprintf("%dd%d(%s)", n.repetitions, n.faces, details)
-	return result{
-		value:   value,
-		details: details,
+	return Result{
+		Value:   value,
+		Details: details,
 	}
 }
 
-func (n diceNode) Type() reflect.Type {
+func (n arithmeticNode) kind() reflect.Type {
 	return reflect.TypeOf(n)
 }
 
-/* TODO
-func Evaluate(expression string) {
-	tokens := tokenize(expression)
-	ast, error := createAST(tokens)
+func (n numericNode) kind() reflect.Type {
+	return reflect.TypeOf(n)
 }
-*/
+
+func (n diceNode) kind() reflect.Type {
+	return reflect.TypeOf(n)
+}
 
 func tokenize(expression string) []token {
 	var tokens []token
@@ -226,7 +221,7 @@ func (t token) toDice() (diceNode, error) {
 	return dice, nil
 }
 
-func (t token) toNode() (node, error) {
+func (t token) toNode() (ResultProvider, error) {
 	if node, err := t.toNumeric(); err == nil {
 		return node, err
 	}
@@ -242,8 +237,8 @@ func (t token) toNode() (node, error) {
 	return nil, fmt.Errorf("unknown token '%s'", t)
 }
 
-func createAST(tokens []token) (node, error) {
-	var astRoot node
+func createAST(tokens []token) (ResultProvider, error) {
+	var astRoot ResultProvider
 	for _, token := range tokens {
 
 		node, err := token.toNode()
@@ -251,20 +246,20 @@ func createAST(tokens []token) (node, error) {
 			return nil, err
 		}
 
-		switch node.Type() {
+		switch node.kind() {
 
-		case numericType:
+		case numericKind:
 			if astRoot == nil {
 				astRoot = node
 				continue
 			}
-			if astRoot.Type() == arithmeticType {
+			if astRoot.kind() == arithmeticKind {
 				tmp := astRoot.(arithmeticNode)
 				tmp.right = node
 				astRoot = tmp
 				continue
 			}
-		case arithmeticType:
+		case arithmeticKind:
 			if astRoot == nil {
 				return nil, fmt.Errorf("expression can not start with arithmetic token")
 			}
@@ -272,12 +267,12 @@ func createAST(tokens []token) (node, error) {
 			tmp.left = astRoot
 			astRoot = tmp
 			continue
-		case diceType:
+		case diceKind:
 			if astRoot == nil {
 				astRoot = node
 				continue
 			}
-			if astRoot.Type() != arithmeticType {
+			if astRoot.kind() != arithmeticKind {
 				return nil, fmt.Errorf("non starting dice token '%s' must be directly preceded by arithmetic token", token)
 			}
 

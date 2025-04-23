@@ -58,7 +58,7 @@ func Test_createAST(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    node
+		want    ResultProvider
 		wantErr bool
 	}{
 		{
@@ -187,14 +187,14 @@ func Test_diceNode_Result(t *testing.T) {
 				faces:       tt.fields.faces,
 			}
 			got := n.Result()
-			if got.value < tt.minValue || got.value >= tt.maxValue {
-				t.Errorf("diceNode.Result() = %v, want %v", got.value, fmt.Sprintf("range %d-%d", tt.minValue, tt.maxValue))
+			if got.Value < tt.minValue || got.Value >= tt.maxValue {
+				t.Errorf("diceNode.Result() = %v, want %v", got.Value, fmt.Sprintf("range %d-%d", tt.minValue, tt.maxValue))
 			}
 
 			pattern := fmt.Sprintf("%dd%d\\(\\d+(,\\d+)*\\)$", n.repetitions, n.faces)
-			ok, err := regexp.MatchString(pattern, got.details)
+			ok, err := regexp.MatchString(pattern, got.Details)
 			if err != nil || !ok {
-				t.Errorf("diceNode.Result() = %v, want pattern %v", got.details, pattern)
+				t.Errorf("diceNode.Result() = %v, want pattern %v", got.Details, pattern)
 			}
 		})
 	}
