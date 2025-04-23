@@ -141,7 +141,7 @@ func Test_token_toDice(t *testing.T) {
 			want: diceNode{
 				repetitions: 2,
 				faces:       20,
-				keep:        -1,
+				keep:        1,
 			},
 			wantErr: false,
 		},
@@ -151,7 +151,7 @@ func Test_token_toDice(t *testing.T) {
 			want: diceNode{
 				repetitions: 2,
 				faces:       20,
-				keep:        1,
+				keep:        -1,
 			},
 			wantErr: false,
 		},
