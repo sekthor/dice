@@ -12,3 +12,4 @@ This repository aims to evaluate TTRPG dice notation (e.g in D&D) used for rolli
 | ✅ | `2d20kh1`  | keep highest *n* (advantage)   | 2 rolls of a 20 sided die, keep highest only     |
 | ✅ | `2d20kl1`  | keep lowest *n* (disadvantage) | 2 rolls of a 20 sided die, keep lowest only      |
 |    | `1d6!`     | exploding dice                 | 1 roll of a 6 sided die, re-roll if max value    |
+|    | `4d6dl1`   | drop lowest *n*                | 4 rolls of a 6 sided die, discard lowest roll    |
