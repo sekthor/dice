@@ -41,6 +41,26 @@ func Test_tokenize(t *testing.T) {
 			args:       args{expression: "1d20+1d10"},
 			wantTokens: []token{"1d20", "+", "1d10"},
 		},
+		{
+			name:       "keep highest",
+			args:       args{expression: "1d20kh1"},
+			wantTokens: []token{"1d20kh1"},
+		},
+		{
+			name:       "keep lowest",
+			args:       args{expression: "1d20kl1"},
+			wantTokens: []token{"1d20kl1"},
+		},
+		{
+			name:       "whitespace between tokens",
+			args:       args{expression: "1d20kl1 + 5"},
+			wantTokens: []token{"1d20kl1", "+", "5"},
+		},
+		{
+			name:       "super random whitespace",
+			args:       args{expression: "1\nd2\t0 kl1 + 5"},
+			wantTokens: []token{"1d20kl1", "+", "5"},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

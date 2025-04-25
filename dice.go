@@ -146,7 +146,7 @@ func tokenize(expression string) []token {
 	for _, char := range expression {
 
 		if unicode.IsSpace(char) {
-			previousTokenEnd = true
+			continue
 		}
 
 		if char == '-' || char == '+' {
@@ -163,7 +163,7 @@ func tokenize(expression string) []token {
 			}
 		}
 
-		if previousTokenEnd {
+		if previousTokenEnd && currentToken != "" {
 			tokens = append(tokens, currentToken)
 			currentToken = ""
 			previousTokenEnd = false
